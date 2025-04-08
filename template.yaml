@@ -53,12 +53,16 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Sub ${AWS::StackName}-user-pool
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+        InviteMessageTemplate:
+          EmailMessage: !Sub |
+            Your username is {username} and temporary password is {####}.
+          EmailSubject: Welcome To The A+P Menu!
       Schema:
         - Name: email
           Required: true
           Mutable: true
-      AutoVerifiedAttributes:
-        - email
       Policies:
         PasswordPolicy:
           MinimumLength: 8
@@ -66,6 +70,8 @@ Resources:
           RequireNumbers: true
           RequireSymbols: true
           RequireUppercase: true
+      AutoVerifiedAttributes:
+        - email
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -86,6 +92,8 @@ Resources:
         - http://localhost:5173
       SupportedIdentityProviders:
         - COGNITO
+      PreventUserExistenceErrors: ENABLED
+
 
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain

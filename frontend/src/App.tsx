@@ -4,7 +4,7 @@ import '@aws-amplify/ui-react/styles.css'
 
 function App() {
   return (
-    <Authenticator>
+    <Authenticator hideSignUp>
       {({ signOut, user }) => (
         <Router>
           <div>
