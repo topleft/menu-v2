@@ -1,0 +1,67 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "recipe-api"
+s3_prefix = "recipe-api"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = "DynamoDBTableName=\"recipes\" S3BucketName=\"recipe-images\""
+resolve_s3 = true
+profile = "cicd"
+image_repositories = []
+
+[dev.deploy.parameters]
+stack_name = "recipe-api-dev"
+s3_prefix = "recipe-api/dev"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = [
+    "DynamoDBTableName=\"recipes-dev\"",
+    "S3BucketName=\"recipe-images-dev\""
+]
+
+[prod.deploy.parameters]
+stack_name = "recipe-api-prod"
+s3_prefix = "recipe-api/prod"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = [
+    "DynamoDBTableName=\"recipes-prod\"",
+    "S3BucketName=\"recipe-images-prod\""
+]
+
+[default.package.parameters]
+s3_prefix = "recipe-api"
+resolve_s3 = true
+output_template_file = "packaged.yaml"
+
+[dev.package.parameters]
+s3_prefix = "recipe-api/dev"
+output_template_file = "packaged-dev.yaml"
+
+[prod.package.parameters]
+s3_prefix = "recipe-api/prod"
+output_template_file = "packaged-prod.yaml"
+
+[default.local_invoke.parameters]
+template_file = "template.yaml"
+event = "events/event.json"
+env_vars = "env.json"
+
+[dev.local_invoke.parameters]
+template_file = "template.yaml"
+event = "events/event-dev.json"
+env_vars = "env-dev.json"
+
+[prod.local_invoke.parameters]
+template_file = "template.yaml"
+event = "events/event-prod.json"
+env_vars = "env-prod.json" 
+
+

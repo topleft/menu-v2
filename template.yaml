@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Recipe API with DynamoDB and S3
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Runtime: python3.12
+    Layers:
+      - !Ref PythonDependenciesLayer
+    Environment:
+      Variables:
+        DYNAMODB_TABLE: !Ref RecipesTable
+        S3_BUCKET: !Ref RecipeImagesBucket
+        LOG_LEVEL: INFO
+  Api:
+    Auth:
+      ApiKeyRequired: true
+    Cors:
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+      AllowCredentials: "'*'"
+
+Resources:
+  DeploymentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub recipe-api-deployment-${AWS::StackName}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            ExpirationInDays: 30
+            NoncurrentVersionExpirationInDays: 30
+
+  RecipeAPI:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: app.lambda_handler
+      Events:
+        HelloEvent:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
+        ListRecipesEvent:
+          Type: Api
+          Properties:
+            Path: /recipes
+            Method: get
+        CreateRecipeEvent:
+          Type: Api
+          Properties:
+            Path: /recipes
+            Method: post
+        GetRecipeEvent:
+          Type: Api
+          Properties:
+            Path: /recipes/{id}
+            Method: get
+        UpdateRecipeEvent:
+          Type: Api
+          Properties:
+            Path: /recipes/{id}
+            Method: put
+        DeleteRecipeEvent:
+          Type: Api
+          Properties:
+            Path: /recipes/{id}
+            Method: delete
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RecipesTable
+        - S3CrudPolicy:
+            BucketName: !Ref RecipeImagesBucket
+
+  RecipesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: recipes
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  RecipeImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub recipe-images-${AWS::StackName}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  ApiDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: CloudFront distribution for Recipe API
+        DefaultCacheBehavior:
+          TargetOriginId: ApiOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - POST
+            - PATCH
+            - DELETE
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          ForwardedValues:
+            QueryString: true
+            Headers:
+              - Authorization
+              - Origin
+              - Access-Control-Request-Headers
+              - Access-Control-Request-Method
+            Cookies:
+              Forward: all
+          MinTTL: 0
+          DefaultTTL: 0
+          MaxTTL: 0
+        Origins:
+          - Id: ApiOrigin
+            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+            OriginPath: /api
+        PriceClass: PriceClass_100
+        HttpVersion: http2
+        IPV6Enabled: true
+        DefaultRootObject: ""
+
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: python-dependencies
+      Description: Python dependencies for Recipe API
+      ContentUri: ./python.zip
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Retain
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/api/"
+  CloudFrontEndpoint:
+    Description: CloudFront distribution endpoint
+    Value: !Sub "https://${ApiDistribution.DomainName}/"
+  RecipesTableName:
+    Description: Name of the DynamoDB table
+    Value: !Ref RecipesTable
+  RecipeImagesBucketName:
+    Description: Name of the S3 bucket for recipe images
+    Value: !Ref RecipeImagesBucket
+  DeploymentBucketName:
+    Description: Name of the S3 bucket for deployment artifacts
+    Value: !Ref DeploymentBucket

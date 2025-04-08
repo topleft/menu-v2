@@ -1,0 +1,206 @@
+openapi: 3.0.0
+info:
+  title: Recipe API
+  description: API for managing recipes with image uploads
+  version: 1.0.0
+servers:
+  - url: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/api
+    description: API Gateway endpoint
+  - url: https://${ApiDistribution.DomainName}
+    description: CloudFront endpoint
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /recipes:
+    get:
+      summary: List all recipes
+      operationId: listRecipes
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recipe'
+        '401':
+          description: Unauthorized - API key missing or invalid
+        '500':
+          description: Internal server error
+    post:
+      summary: Create a new recipe
+      operationId: createRecipe
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecipeRequest'
+      responses:
+        '201':
+          description: Recipe created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized - API key missing or invalid
+        '500':
+          description: Internal server error
+
+  /recipes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Recipe ID
+    get:
+      summary: Get a recipe by ID
+      operationId: getRecipe
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '401':
+          description: Unauthorized - API key missing or invalid
+        '404':
+          description: Recipe not found
+        '500':
+          description: Internal server error
+    put:
+      summary: Update a recipe
+      operationId: updateRecipe
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRecipeRequest'
+      responses:
+        '200':
+          description: Recipe updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized - API key missing or invalid
+        '404':
+          description: Recipe not found
+        '500':
+          description: Internal server error
+    delete:
+      summary: Delete a recipe
+      operationId: deleteRecipe
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: Recipe deleted successfully
+        '401':
+          description: Unauthorized - API key missing or invalid
+        '404':
+          description: Recipe not found
+        '500':
+          description: Internal server error
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for authentication
+
+  schemas:
+    Recipe:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the recipe
+        name:
+          type: string
+          description: Name of the recipe
+        description:
+          type: string
+          description: Description of the recipe
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the recipe
+        image_urls:
+          type: array
+          items:
+            type: string
+          description: URLs of images associated with the recipe
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the recipe was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the recipe was last updated
+      required:
+        - id
+        - name
+        - description
+        - tags
+        - created_at
+        - updated_at
+
+    CreateRecipeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the recipe
+        description:
+          type: string
+          description: Description of the recipe
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the recipe
+      required:
+        - name
+        - description
+        - tags
+
+    UpdateRecipeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the recipe
+        description:
+          type: string
+          description: Description of the recipe
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the recipe

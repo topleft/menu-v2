@@ -1,0 +1,39 @@
+{
+  "version": "2.0",
+  "routeKey": "POST /recipes",
+  "rawPath": "/recipes",
+  "rawQueryString": "",
+  "headers": {
+    "accept": "*/*",
+    "content-length": "123",
+    "content-type": "application/json",
+    "host": "localhost:3000",
+    "user-agent": "curl/7.88.1",
+    "x-amzn-trace-id": "Root=1-65f2c0a3-1234567890abcdef1234567890abcdef",
+    "x-forwarded-for": "127.0.0.1",
+    "x-forwarded-port": "3000",
+    "x-forwarded-proto": "http"
+  },
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "api-id",
+    "domainName": "localhost:3000",
+    "domainPrefix": "localhost",
+    "http": {
+      "method": "POST",
+      "path": "/recipes",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "127.0.0.1",
+      "userAgent": "curl/7.88.1"
+    },
+    "requestId": "id",
+    "routeKey": "POST /recipes",
+    "stage": "$default",
+    "time": "12/Mar/2015:19:03:58 +0000",
+    "timeEpoch": 1426284598000
+  },
+  "body": "{\"name\": \"Test Recipe\", \"description\": \"A test recipe\", \"ingredients\": [\"ingredient1\", \"ingredient2\"], \"instructions\": [\"step1\", \"step2\"], \"prep_time\": 30, \"cook_time\": 45, \"servings\": 4}",
+  "isBase64Encoded": false,
+  "httpMethod": "POST",
+  "path": "/recipes"
+} 
