@@ -1,27 +1,36 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Recipe API with DynamoDB and S3
+Description: Recipe API with JWT Authentication
 
 Globals:
   Function:
     Timeout: 30
     MemorySize: 128
     Runtime: python3.12
-    Layers:
-      - !Ref PythonDependenciesLayer
     Environment:
       Variables:
         DYNAMODB_TABLE: !Ref RecipesTable
         S3_BUCKET: !Ref RecipeImagesBucket
         LOG_LEVEL: INFO
+        USER_POOL_ID: !Ref UserPool
+        USER_POOL_CLIENT_ID: !Ref UserPoolClient
   Api:
     Auth:
-      ApiKeyRequired: true
+      DefaultAuthorizer: JWTAuthorizer
+      Authorizers:
+        JWTAuthorizer:
+          UserPoolArn: !GetAtt UserPool.Arn
     Cors:
       AllowMethods: "'*'"
       AllowHeaders: "'*'"
       AllowOrigin: "'*'"
       AllowCredentials: "'*'"
+
+Parameters:
+  CognitoDomainPrefix:
+    Type: String
+    Default: recipe-api
+    Description: Prefix for Cognito hosted UI domain
 
 Resources:
   DeploymentBucket:
@@ -40,47 +49,78 @@ Resources:
             ExpirationInDays: 30
             NoncurrentVersionExpirationInDays: 30
 
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-user-pool
+      Schema:
+        - Name: email
+          Required: true
+          Mutable: true
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub ${AWS::StackName}-client
+      GenerateSecret: false
+      AllowedOAuthFlows:
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+      CallbackURLs:
+        - https://localhost:3000/callback
+      LogoutURLs:
+        - http://localhost:3000
+      SupportedIdentityProviders:
+        - COGNITO
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub ${CognitoDomainPrefix}-${AWS::StackName}
+      UserPoolId: !Ref UserPool
+
   RecipeAPI:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
+      CodeUri: ./
       Handler: app.lambda_handler
-      Events:
-        HelloEvent:
-          Type: Api
-          Properties:
-            Path: /hello
-            Method: get
-        ListRecipesEvent:
-          Type: Api
-          Properties:
-            Path: /recipes
-            Method: get
-        CreateRecipeEvent:
-          Type: Api
-          Properties:
-            Path: /recipes
-            Method: post
-        GetRecipeEvent:
-          Type: Api
-          Properties:
-            Path: /recipes/{id}
-            Method: get
-        UpdateRecipeEvent:
-          Type: Api
-          Properties:
-            Path: /recipes/{id}
-            Method: put
-        DeleteRecipeEvent:
-          Type: Api
-          Properties:
-            Path: /recipes/{id}
-            Method: delete
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref PythonDependenciesLayer
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref RecipesTable
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref RecipesTable
-        - S3CrudPolicy:
-            BucketName: !Ref RecipeImagesBucket
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            Auth:
+              Authorizer: JWTAuthorizer
 
   RecipesTable:
     Type: AWS::DynamoDB::Table
@@ -176,3 +216,12 @@ Outputs:
   DeploymentBucketName:
     Description: Name of the S3 bucket for deployment artifacts
     Value: !Ref DeploymentBucket
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient
+  UserPoolDomain:
+    Description: Cognito User Pool Domain
+    Value: !Sub ${CognitoDomainPrefix}-${AWS::StackName}.auth.${AWS::Region}.amazoncognito.com

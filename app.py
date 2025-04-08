@@ -30,9 +30,12 @@ controller = RecipeController(repository)
 
 def get_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Get a recipe by ID."""
+    # Get user info from JWT claims
+    user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
     logger.info(
         "handling_get_recipe_request",
         recipe_id=event["pathParameters"]["id"],
+        user_id=user_id,
         request_id=event["requestContext"]["requestId"],
     )
     try:
@@ -59,12 +62,17 @@ def get_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def create_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Create a new recipe."""
+    # Get user info from JWT claims
+    user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
     logger.info(
         "handling_create_recipe_request",
+        user_id=user_id,
         request_id=event["requestContext"]["requestId"],
     )
     try:
         body = json.loads(event["body"])
+        # Add user_id to recipe data
+        body["user_id"] = user_id
         response = controller.create_recipe(body)
         logger.info(
             "successfully_created_recipe",
@@ -87,14 +95,19 @@ def create_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def update_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Update an existing recipe."""
+    # Get user info from JWT claims
+    user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
     logger.info(
         "handling_update_recipe_request",
         recipe_id=event["pathParameters"]["id"],
+        user_id=user_id,
         request_id=event["requestContext"]["requestId"],
     )
     try:
         recipe_id = event["pathParameters"]["id"]
         body = json.loads(event["body"])
+        # Add user_id to recipe data
+        body["user_id"] = user_id
         response = controller.update_recipe(recipe_id, body)
         logger.info(
             "successfully_updated_recipe",
@@ -117,9 +130,12 @@ def update_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def delete_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Delete a recipe by ID."""
+    # Get user info from JWT claims
+    user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
     logger.info(
         "handling_delete_recipe_request",
         recipe_id=event["pathParameters"]["id"],
+        user_id=user_id,
         request_id=event["requestContext"]["requestId"],
     )
     try:
@@ -146,8 +162,11 @@ def delete_recipe(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def list_recipes(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """List all recipes with pagination support."""
+    # Get user info from JWT claims
+    user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
     logger.info(
         "handling_list_recipes_request",
+        user_id=user_id,
         request_id=event["requestContext"]["requestId"],
     )
     try:
@@ -178,8 +197,11 @@ def list_recipes(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def hello(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Health check endpoint."""
+    # Get user info from JWT claims
+    user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
     logger.info(
         "handling_hello_request",
+        user_id=user_id,
         request_id=event["requestContext"]["requestId"],
     )
     return {
@@ -217,7 +239,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         # Find matching route handler
         for route_path, methods in ROUTE_MAP.items():
-            if path == route_path or path.startswith(route_path.replace("{id}", "")):
+            if path == route_path or path.startswith(
+                route_path.replace("{id}", "")
+            ):
                 if http_method in methods:
                     return methods[http_method](event, context)
 
